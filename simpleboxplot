@@ -1,0 +1,62 @@
+library(shiny)
+library(ggplot2)
+library(stringr)
+library(dplyr)
+library(DT)
+library(tools)
+library(ggthemr)
+ggthemr("dust")
+load("uni_bi_quality_wheat.Rdata")
+
+
+ui <- fluidPage(
+  selectInput("trait","Trait",choices = c("b", "FlourYield", "FSV", "Protein","PSI", "WaterAb")),
+  
+  mainPanel(
+    plotOutput("myplot"),
+    br(), br(),
+    h2(textOutput("number")),
+    tableOutput("results")
+    
+  )
+)
+
+
+ 
+
+server <- function(input, output, session) {
+  
+  quality_subset <- reactive({
+    #a <- subset(qualitywheat, trait %in% input$p)
+    filter(qualitywheat, trait%in% input$trait)
+    #a <- droplevels(a)
+    #return(a)
+  })
+  
+  quality_table <- reactive({
+    a <- subset(qualitywheat, trait %in% input$trait)
+    
+    a<-a %>% 
+      group_by(method) %>% 
+      summarise(average = mean(accuracy),
+                sem= sd(accuracy)/sqrt(length(accuracy)))
+    a <- droplevels(a)
+    return(a)
+  })
+  
+ # formulaText <- reactive({
+#    paste("accuracy ~", input$p)
+#  })
+  
+  output$myplot <- renderPlot({
+    ggplot(quality_subset(), aes(x=trait, y=accuracy,fill=method)) + 
+      geom_boxplot()
+  })
+  
+  output$results <- renderTable({
+    quality_table()
+  })
+  
+}
+
+shinyApp(ui, server)
